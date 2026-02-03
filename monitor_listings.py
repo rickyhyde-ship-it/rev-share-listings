@@ -1,5 +1,4 @@
 import requests
-import time
 import json
 import os
 from datetime import datetime
@@ -22,7 +21,7 @@ def save_notified_players(notified_ids):
     """Save notified player IDs to cache"""
     try:
         with open(CACHE_FILE, 'w') as f:
-            json.dump(list(notified_ids), f)
+            json.dump(list(notified_ids), f, indent=2)
     except Exception as e:
         print(f"Error saving cache: {e}")
 
@@ -39,7 +38,7 @@ def send_discord_message(player_id, player_info):
         "title": f"🔥 Revenue Share Player Found!",
         "description": f"**{player_info['name']}** (ID: {player_id})",
         "url": player_url,
-        "color": 3447003,  # Blue color
+        "color": 3447003,
         "fields": [
             {
                 "name": "Revenue Share",
@@ -95,10 +94,39 @@ def send_discord_message(player_id, player_info):
         print(f"❌ Error sending Discord message: {e}")
         return False
 
+def send_no_results_message():
+    """Send a Discord message when no new players are found"""
+    if not DISCORD_WEBHOOK_URL:
+        print("ERROR: DISCORD_WEBHOOK_URL not set in secrets")
+        return False
+    
+    payload = {
+        "content": "ℹ️ **No new players found** - No listings with revenue share ≥ 500% in this check.",
+        "embeds": [{
+            "color": 10070709,  # Gray color
+            "timestamp": datetime.utcnow().isoformat(),
+            "footer": {
+                "text": "MFL Listing Monitor"
+            }
+        }]
+    }
+    
+    try:
+        response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
+        if response.status_code == 204:
+            print(f"✅ Sent 'no results' notification to Discord")
+            return True
+        else:
+            print(f"❌ Discord webhook failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Error sending Discord message: {e}")
+        return False
+
 def check_listings():
     """Check API for listings with revenue share >= 500"""
     try:
-        print(f"\n🔍 Checking API at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"🔍 Checking API at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         response = requests.get(API_URL, timeout=30)
         response.raise_for_status()
         
@@ -139,13 +167,11 @@ def check_listings():
                         'price': listing.get('price', 'N/A')
                     }
                     
-                    print(f"🎯 Found new player with RS >= 1: {player_info['name']} (ID: {player_id}, RS: {revenue_share}%)")
+                    print(f"🎯 Found new player with RS >= 500: {player_info['name']} (ID: {player_id}, RS: {revenue_share}%)")
                     
                     # Send Discord notification
                     if send_discord_message(player_id, player_info):
                         new_notifications.append(player_id)
-                        # Small delay between messages to avoid rate limiting
-                        time.sleep(1)
             
             except Exception as e:
                 print(f"⚠️  Error processing listing: {e}")
@@ -158,6 +184,8 @@ def check_listings():
             print(f"✅ Notified {len(new_notifications)} new player(s)")
         else:
             print("ℹ️  No new players with revenue share >= 500")
+            # Send Discord notification that no new players were found
+            send_no_results_message()
         
         return True
         
@@ -168,21 +196,7 @@ def check_listings():
         print(f"❌ Unexpected error: {e}")
         return False
 
-def main():
-    """Main function - checks API every 60 seconds for 4 minutes"""
-    print("🚀 MFL Listing Monitor Started")
-    print(f"⏰ Will check every 60 seconds for 4 minutes")
-    
-    # Run 4 times (4 minutes total)
-    for i in range(4):
-        check_listings()
-        
-        # Wait 60 seconds before next check (except on last iteration)
-        if i < 3:
-            print(f"⏳ Waiting 60 seconds... ({i+1}/4 checks complete)")
-            time.sleep(60)
-    
-    print("\n✅ Monitoring session complete")
-
 if __name__ == "__main__":
-    main()
+    print("🚀 MFL Listing Monitor")
+    check_listings()
+    print("✅ Check complete")
