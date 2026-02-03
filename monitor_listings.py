@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+import time
 from datetime import datetime
 
 API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/listings?limit=50&type=PLAYER&status=AVAILABLE&ageMax=25&overallMin=65&isFreeAgent=false&view=full"
@@ -101,9 +102,9 @@ def send_no_results_message():
         return False
     
     payload = {
-        "content": "ℹ️ **No new players found** - No listings with revenue share ≥ 500% in this check.",
+        "content": "ℹ️ **No new players found** - No listings with revenue share ≥ 500% in this check cycle.",
         "embeds": [{
-            "color": 10070709,  # Gray color
+            "color": 10070709,
             "timestamp": datetime.utcnow().isoformat(),
             "footer": {
                 "text": "MFL Listing Monitor"
@@ -123,7 +124,7 @@ def send_no_results_message():
         print(f"❌ Error sending Discord message: {e}")
         return False
 
-def check_listings():
+def check_listings(notified_players):
     """Check API for listings with revenue share >= 500"""
     try:
         print(f"🔍 Checking API at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -133,7 +134,6 @@ def check_listings():
         listings = response.json()
         print(f"📊 Found {len(listings)} total listings")
         
-        notified_players = load_notified_players()
         new_notifications = []
         
         for listing in listings:
@@ -172,31 +172,52 @@ def check_listings():
                     # Send Discord notification
                     if send_discord_message(player_id, player_info):
                         new_notifications.append(player_id)
+                        notified_players.add(player_id)
             
             except Exception as e:
                 print(f"⚠️  Error processing listing: {e}")
                 continue
         
-        # Update cache with new notifications
-        if new_notifications:
-            notified_players.update(new_notifications)
-            save_notified_players(notified_players)
-            print(f"✅ Notified {len(new_notifications)} new player(s)")
-        else:
-            print("ℹ️  No new players with revenue share >= 500")
-            # Send Discord notification that no new players were found
-            send_no_results_message()
-        
-        return True
+        return new_notifications
         
     except requests.exceptions.RequestException as e:
         print(f"❌ API request failed: {e}")
-        return False
+        return []
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
-        return False
+        return []
+
+def main():
+    """Main function - checks every 60 seconds for ~4.5 minutes"""
+    print("🚀 MFL Listing Monitor - Starting 60-second interval checks")
+    
+    # Load cache once at the start
+    notified_players = load_notified_players()
+    all_new_notifications = []
+    
+    # Run 5 checks with 60-second intervals (5 minutes total)
+    for i in range(5):
+        print(f"\n{'='*60}")
+        print(f"Check {i+1}/5")
+        print(f"{'='*60}")
+        
+        new_notifications = check_listings(notified_players)
+        all_new_notifications.extend(new_notifications)
+        
+        # Wait 60 seconds before next check (except on last iteration)
+        if i < 4:
+            print(f"⏳ Waiting 60 seconds until next check...")
+            time.sleep(60)
+    
+    # Save updated cache at the end
+    if all_new_notifications:
+        save_notified_players(notified_players)
+        print(f"\n✅ Total notifications sent: {len(all_new_notifications)}")
+    else:
+        print(f"\nℹ️ No new players found in this cycle")
+        send_no_results_message()
+    
+    print("✅ Monitoring cycle complete")
 
 if __name__ == "__main__":
-    print("🚀 MFL Listing Monitor")
-    check_listings()
-    print("✅ Check complete")
+    main()
