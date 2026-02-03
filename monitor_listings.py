@@ -96,7 +96,7 @@ def send_discord_message(player_id, player_info):
         return False
 
 def check_listings():
-    """Check API for listings with revenue share >= 1"""
+    """Check API for listings with revenue share >= 500"""
     try:
         print(f"\n🔍 Checking API at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         response = requests.get(API_URL, timeout=30)
@@ -120,8 +120,8 @@ def check_listings():
                 active_contract = player.get('activeContract', {})
                 revenue_share = active_contract.get('revenueShare', 0)
                 
-                # Check if revenue share is 1 or higher
-                if revenue_share >= 1:
+                # Check if revenue share is 500 or higher
+                if revenue_share >= 500:
                     # Skip if already notified
                     if player_id in notified_players:
                         print(f"⏭️  Player {player_id} already notified (RS: {revenue_share}%)")
@@ -157,7 +157,7 @@ def check_listings():
             save_notified_players(notified_players)
             print(f"✅ Notified {len(new_notifications)} new player(s)")
         else:
-            print("ℹ️  No new players with revenue share >= 1")
+            print("ℹ️  No new players with revenue share >= 500")
         
         return True
         
