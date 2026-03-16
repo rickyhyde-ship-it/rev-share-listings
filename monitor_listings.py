@@ -102,7 +102,7 @@ def send_no_results_message():
         return False
     
     payload = {
-        "content": "ℹ️ **No new players found** - No listings with revenue share ≥ 500% in this check cycle.",
+        "content": "ℹ️ **No new players found** - No listings with revenue share ≥ 100% in this check cycle.",
         "embeds": [{
             "color": 10070709,
             "timestamp": datetime.utcnow().isoformat(),
@@ -125,7 +125,7 @@ def send_no_results_message():
         return False
 
 def check_listings(notified_players):
-    """Check API for listings with revenue share >= 500"""
+    """Check API for listings with revenue share >= 100"""
     try:
         print(f"🔍 Checking API at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         response = requests.get(API_URL, timeout=30)
@@ -148,8 +148,8 @@ def check_listings(notified_players):
                 active_contract = player.get('activeContract', {})
                 revenue_share = active_contract.get('revenueShare', 0)
                 
-                # Check if revenue share is 500 or higher
-                if revenue_share >= 500:
+                # Check if revenue share is 100 or higher
+                if revenue_share >= 100:
                     # Skip if already notified
                     if player_id in notified_players:
                         print(f"⏭️  Player {player_id} already notified (RS: {revenue_share}%)")
@@ -167,7 +167,7 @@ def check_listings(notified_players):
                         'price': listing.get('price', 'N/A')
                     }
                     
-                    print(f"🎯 Found new player with RS >= 500: {player_info['name']} (ID: {player_id}, RS: {revenue_share}%)")
+                    print(f"🎯 Found new player with RS >= 100: {player_info['name']} (ID: {player_id}, RS: {revenue_share}%)")
                     
                     # Send Discord notification
                     if send_discord_message(player_id, player_info):
