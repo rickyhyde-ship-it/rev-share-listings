@@ -4,7 +4,7 @@ import os
 import time
 from datetime import datetime
 
-API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/listings?limit=50&type=PLAYER&status=AVAILABLE&ageMax=25&overallMin=65&isFreeAgent=false&view=full"
+API_URL = "https://z519wdyajg.execute-api.us-east-1.amazonaws.com/prod/listings?limit=50&type=PLAYER&status=AVAILABLE&ageMax=28&overallMin=60&priceMax=1&isFreeAgent=false&view=full"
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 CACHE_FILE = 'notified_players.json'
 
